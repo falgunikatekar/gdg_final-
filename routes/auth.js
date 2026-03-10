@@ -12,7 +12,12 @@ const router = express.Router();
 router.post('/login', [
   body('userType').isIn(['hospital', 'patient']).withMessage('Invalid user type'),
   body('username').optional().notEmpty().withMessage('Username is required for hospital'),
-  body('password').notEmpty().withMessage('Password is required'),
+  body('password').custom((value, { req }) => {
+    if (req.body.userType === 'hospital' && !value) {
+      throw new Error('Password is required');
+    }
+    return true;
+  }),
   body('patientData').optional().isObject().withMessage('Patient data is required for patient registration')
 ], async (req, res) => {
   try {
@@ -58,7 +63,7 @@ router.post('/login', [
 
       // Check if patient already exists by contact
       let patient = await Patient.findOne({ contact: patientData.contact });
-      
+
       if (!patient) {
         // Create new patient
         patient = new Patient(patientData);

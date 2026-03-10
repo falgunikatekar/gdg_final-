@@ -11,7 +11,7 @@ const useSocket = () => {
     if (!user) return;
 
     // Initialize socket connection
-    socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000', {
+    socketRef.current = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5001', {
       auth: {
         token: localStorage.getItem('token'),
         userType,

@@ -103,8 +103,27 @@ const InventoryManagement = () => {
   };
 
   const addMedicine = async () => {
+    // Validation
+    if (!newMedicine.name || !newMedicine.manufacturer || !newMedicine.category || 
+        !newMedicine.description || !newMedicine.batchNumber || 
+        !newMedicine.manufactureDate || !newMedicine.expiryDate) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    if (newMedicine.unitPrice <= 0 || newMedicine.stock < 0) {
+      toast.error('Price must be positive and stock cannot be negative');
+      return;
+    }
+
+    if (new Date(newMedicine.expiryDate) <= new Date(newMedicine.manufactureDate)) {
+      toast.error('Expiry date must be after manufacture date');
+      return;
+    }
+
     try {
-      await axios.post('/api/inventory', newMedicine);
+      console.log('Adding medicine:', newMedicine);
+      const response = await axios.post('/api/inventory', newMedicine);
       toast.success('Medicine added successfully');
       setNewMedicine({
         name: '',
@@ -123,7 +142,9 @@ const InventoryManagement = () => {
       fetchInventoryData();
       fetchStats();
     } catch (error) {
-      toast.error('Failed to add medicine');
+      console.error('Error adding medicine:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to add medicine';
+      toast.error(errorMessage);
     }
   };
 
@@ -316,65 +337,106 @@ const InventoryManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <input
                 type="text"
-                placeholder="Medicine Name"
+                placeholder="Enter medicine name (e.g., Paracetamol 500mg)"
                 value={newMedicine.name}
                 onChange={(e) => setNewMedicine({...newMedicine, name: e.target.value})}
                 className="input-field"
+                required
               />
               <input
                 type="text"
-                placeholder="Manufacturer"
+                placeholder="Enter manufacturer name (e.g., Cipla, Sun Pharma)"
                 value={newMedicine.manufacturer}
                 onChange={(e) => setNewMedicine({...newMedicine, manufacturer: e.target.value})}
                 className="input-field"
+                required
               />
               <input
                 type="text"
-                placeholder="Category"
+                placeholder="Select category (e.g., Antibiotics, Pain Killers)"
                 value={newMedicine.category}
                 onChange={(e) => setNewMedicine({...newMedicine, category: e.target.value})}
                 className="input-field"
+                required
+              />
+              <textarea
+                placeholder="Enter description (e.g., Used for fever and mild pain)"
+                value={newMedicine.description}
+                onChange={(e) => setNewMedicine({...newMedicine, description: e.target.value})}
+                className="input-field md:col-span-2 lg:col-span-3"
+                rows="2"
+                required
               />
               <input
                 type="number"
-                placeholder="Unit Price"
+                placeholder="Enter unit price in ₹ (e.g., 25.50)"
                 value={newMedicine.unitPrice}
                 onChange={(e) => setNewMedicine({...newMedicine, unitPrice: parseFloat(e.target.value) || 0})}
                 className="input-field"
+                step="0.01"
+                min="0"
+                required
               />
               <input
                 type="number"
-                placeholder="Stock Quantity"
+                placeholder="Enter stock quantity (e.g., 100 tablets)"
                 value={newMedicine.stock}
                 onChange={(e) => setNewMedicine({...newMedicine, stock: parseInt(e.target.value) || 0})}
                 className="input-field"
+                min="0"
+                required
               />
               <input
                 type="number"
-                placeholder="Min Stock Level"
+                placeholder="Minimum stock level for alerts (e.g., 20)"
                 value={newMedicine.minStockLevel}
                 onChange={(e) => setNewMedicine({...newMedicine, minStockLevel: parseInt(e.target.value) || 10})}
+                className="input-field"
+                min="0"
+              />
+              <input
+                type="text"
+                placeholder="Enter batch number (e.g., BATCH2024001)"
+                value={newMedicine.batchNumber}
+                onChange={(e) => setNewMedicine({...newMedicine, batchNumber: e.target.value})}
+                className="input-field"
+                required
+              />
+              <input
+                type="date"
+                placeholder="Select manufacture date"
+                value={newMedicine.manufactureDate}
+                onChange={(e) => setNewMedicine({...newMedicine, manufactureDate: e.target.value})}
+                className="input-field"
+                required
+              />
+              <input
+                type="date"
+                placeholder="Select expiry date"
+                value={newMedicine.expiryDate}
+                onChange={(e) => setNewMedicine({...newMedicine, expiryDate: e.target.value})}
+                className="input-field"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Supplier name (e.g., MedSupply Corp)"
+                value={newMedicine.supplier.name}
+                onChange={(e) => setNewMedicine({...newMedicine, supplier: {...newMedicine.supplier, name: e.target.value}})}
                 className="input-field"
               />
               <input
                 type="text"
-                placeholder="Batch Number"
-                value={newMedicine.batchNumber}
-                onChange={(e) => setNewMedicine({...newMedicine, batchNumber: e.target.value})}
+                placeholder="Supplier contact (e.g., +91 9876543210)"
+                value={newMedicine.supplier.contact}
+                onChange={(e) => setNewMedicine({...newMedicine, supplier: {...newMedicine.supplier, contact: e.target.value}})}
                 className="input-field"
               />
               <input
-                type="date"
-                placeholder="Manufacture Date"
-                value={newMedicine.manufactureDate}
-                onChange={(e) => setNewMedicine({...newMedicine, manufactureDate: e.target.value})}
-                className="input-field"
-              />
-              <input
-                type="date"
-                placeholder="Expiry Date"
-                value={newMedicine.expiryDate}
-                onChange={(e) => setNewMedicine({...newMedicine, expiryDate: e.target.value})}
+                type="email"
+                placeholder="Supplier email (e.g., supplier@medcorp.com)"
+                value={newMedicine.supplier.email}
+                onChange={(e) => setNewMedicine({...newMedicine, supplier: {...newMedicine.supplier, email: e.target.value}})}
                 className="input-field"
               />
             </div>

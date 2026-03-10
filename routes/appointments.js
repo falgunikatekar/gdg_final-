@@ -3,7 +3,111 @@ const { hospitalAuth, patientAuth } = require('../middleware/auth');
 const Appointment = require('../models/Appointment');
 const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
+const Hospital = require('../models/Hospital');
 const router = express.Router();
+
+// Seed doctors with specialties (for development)
+router.post('/doctors/seed', hospitalAuth, async (req, res) => {
+  try {
+    const hospitalId = req.user._id;
+    
+    // Clear existing doctors for this hospital
+    await Doctor.deleteMany({ hospital: hospitalId });
+
+    const doctors = [
+      {
+        name: 'Dr. Rajesh Sharma',
+        specialization: 'Cardiology',
+        email: 'rajesh.sharma@hospital.com',
+        phone: '+91 9876543211',
+        experience: 15,
+        qualification: 'MD, DM (Cardiology)',
+        department: 'Cardiology',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Wednesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Friday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 }
+        ]
+      },
+      {
+        name: 'Dr. Priya Nair',
+        specialization: 'Pediatrics',
+        email: 'priya.nair@hospital.com',
+        phone: '+91 9876543212',
+        experience: 12,
+        qualification: 'MD (Pediatrics)',
+        department: 'Pediatrics',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Tuesday', startTime: '08:00', endTime: '16:00', maxAppointments: 25 },
+          { day: 'Thursday', startTime: '08:00', endTime: '16:00', maxAppointments: 25 },
+          { day: 'Saturday', startTime: '09:00', endTime: '14:00', maxAppointments: 15 }
+        ]
+      },
+      {
+        name: 'Dr. Amit Patel',
+        specialization: 'Orthopedics',
+        email: 'amit.patel@hospital.com',
+        phone: '+91 9876543213',
+        experience: 18,
+        qualification: 'MS (Orthopedics), MCh',
+        department: 'Orthopedics',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 },
+          { day: 'Wednesday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 },
+          { day: 'Friday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 }
+        ]
+      },
+      {
+        name: 'Dr. Sneha Reddy',
+        specialization: 'Gynecology',
+        email: 'sneha.reddy@hospital.com',
+        phone: '+91 9876543214',
+        experience: 10,
+        qualification: 'MD, DGO (Gynecology)',
+        department: 'Gynecology',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Saturday', startTime: '09:00', endTime: '15:00', maxAppointments: 18 }
+        ]
+      },
+      {
+        name: 'Dr. Vikram Malhotra',
+        specialization: 'Neurology',
+        email: 'vikram.malhotra@hospital.com',
+        phone: '+91 9876543215',
+        experience: 20,
+        qualification: 'MD, DM (Neurology)',
+        department: 'Neurology',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
+          { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
+          { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 }
+        ]
+      }
+    ];
+
+    const insertedDoctors = await Doctor.insertMany(doctors);
+    res.json({ 
+      message: 'Doctors seeded successfully', 
+      doctors: insertedDoctors.map(d => ({
+        id: d._id,
+        name: d.name,
+        specialization: d.specialization,
+        department: d.department,
+        experience: d.experience
+      }))
+    });
+  } catch (error) {
+    console.error('Error seeding doctors:', error);
+    res.status(500).json({ message: 'Failed to seed doctors' });
+  }
+});
 
 // Get available doctors with their schedules
 router.get('/doctors/available', hospitalAuth, async (req, res) => {

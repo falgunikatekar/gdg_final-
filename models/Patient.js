@@ -35,7 +35,12 @@ const patientSchema = new mongoose.Schema({
     allergies: [String],
     chronicDiseases: [String],
     previousSurgeries: [String],
-    currentMedications: [String]
+    currentMedications: [String],
+    lastCheckup: Date,
+    vaccinations: [{
+      name: String,
+      date: Date
+    }]
   },
   currentIssue: {
     type: String,
@@ -58,6 +63,21 @@ const patientSchema = new mongoose.Schema({
   reports: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Report'
+  }],
+  documents: [{
+    title: String,
+    type: {
+      type: String,
+      enum: ['prescription', 'lab_result', 'imaging', 'discharge_summary', 'vaccination', 'other']
+    },
+    date: Date,
+    description: String,
+    filename: String,
+    path: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
   }],
   appointments: [{
     type: mongoose.Schema.Types.ObjectId,

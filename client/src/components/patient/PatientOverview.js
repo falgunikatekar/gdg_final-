@@ -31,17 +31,16 @@ const PatientOverview = () => {
 
   const fetchPatientData = async () => {
     try {
-      // This would typically come from an endpoint like /api/patient/profile
-      // For now, we'll use the user data from auth context
+      const response = await axios.get('/api/patient/profile');
       setPatientData({
-        name: 'John Doe',
-        age: 35,
-        gender: 'male',
-        contact: '+1234567890',
-        email: 'john@example.com',
-        address: '123 Main St, City',
-        bloodGroup: 'O+',
-        status: 'outpatient'
+        name: response.data.name,
+        age: response.data.age,
+        gender: response.data.gender,
+        contact: response.data.contact,
+        email: response.data.email,
+        address: response.data.address,
+        bloodGroup: response.data.medicalHistory?.bloodGroup || 'N/A',
+        status: response.data.status
       });
     } catch (error) {
       console.error('Failed to fetch patient data:', error);
@@ -111,7 +110,7 @@ const PatientOverview = () => {
               Edit Profile
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -122,7 +121,7 @@ const PatientOverview = () => {
                 <p className="text-sm font-medium text-gray-900">{patientData.name}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <Activity className="h-6 w-6 text-blue-600" />
@@ -132,7 +131,7 @@ const PatientOverview = () => {
                 <p className="text-sm font-medium text-gray-900">{patientData.age} years, {patientData.gender}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
                 <Heart className="h-6 w-6 text-red-600" />
@@ -142,7 +141,7 @@ const PatientOverview = () => {
                 <p className="text-sm font-medium text-gray-900">{patientData.bloodGroup}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
                 <CheckCircle className="h-6 w-6 text-purple-600" />
@@ -155,7 +154,7 @@ const PatientOverview = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center text-sm text-gray-600">
               <Phone className="h-4 w-4 mr-2" />

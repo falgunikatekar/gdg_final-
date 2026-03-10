@@ -15,10 +15,12 @@ import {
   Settings,
   TrendingUp,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  UserCheck
 } from 'lucide-react';
 import DashboardOverview from '../components/hospital/DashboardOverview';
 import ResourceManagement from '../components/hospital/ResourceManagement';
+import ResourceAllocation from '../components/hospital/ResourceAllocation';
 import PatientManagement from '../components/hospital/PatientManagement';
 import InventoryManagement from '../components/hospital/InventoryManagement';
 import AppointmentManagement from '../components/hospital/AppointmentManagement';
@@ -33,6 +35,7 @@ const HospitalDashboard = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp, path: '/hospital' },
     { id: 'resources', label: 'Resources', icon: Activity, path: '/hospital/resources' },
+    { id: 'allocation', label: 'Resource Allocation', icon: UserCheck, path: '/hospital/allocation' },
     { id: 'patients', label: 'Patients', icon: Users, path: '/hospital/patients' },
     { id: 'inventory', label: 'Inventory', icon: Package, path: '/hospital/inventory' },
     { id: 'appointments', label: 'Appointments', icon: Calendar, path: '/hospital/appointments' },

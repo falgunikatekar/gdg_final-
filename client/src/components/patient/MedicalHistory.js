@@ -43,56 +43,28 @@ const MedicalHistory = () => {
 
   const fetchMedicalHistory = async () => {
     try {
-      // Mock data - in real implementation, this would come from an API
+      const response = await axios.get('/api/patient/profile');
+      const data = response.data;
       setMedicalHistory({
-        bloodGroup: 'O+',
-        allergies: ['Penicillin', 'Peanuts'],
-        chronicDiseases: ['Hypertension'],
-        previousSurgeries: ['Appendectomy - 2015'],
-        currentMedications: ['Lisinopril 10mg', 'Metformin 500mg'],
-        emergencyContact: {
-          name: 'Jane Doe',
-          phone: '+1234567890',
-          relation: 'Spouse'
-        },
-        lastCheckup: new Date('2024-01-15'),
-        vaccinations: [
-          { name: 'COVID-19', date: '2023-12-01' },
-          { name: 'Flu Shot', date: '2023-10-15' },
-          { name: 'Tetanus', date: '2022-05-20' }
-        ]
+        ...(data.medicalHistory || {
+          allergies: [],
+          chronicDiseases: [],
+          previousSurgeries: [],
+          currentMedications: [],
+          vaccinations: []
+        }),
+        emergencyContact: data.emergencyContact || { name: 'N/A', phone: 'N/A', relation: 'N/A' }
       });
+      setDocuments(data.documents || []);
     } catch (error) {
       toast.error('Failed to load medical history');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchDocuments = async () => {
-    try {
-      // Mock data - in real implementation, this would come from an API
-      setDocuments([
-        {
-          id: 1,
-          title: 'Annual Blood Test Results',
-          type: 'lab_result',
-          date: '2024-01-15',
-          description: 'Complete blood count and metabolic panel',
-          filename: 'blood_test_2024.pdf'
-        },
-        {
-          id: 2,
-          title: 'Chest X-Ray',
-          type: 'imaging',
-          date: '2023-12-01',
-          description: 'Routine chest X-ray for annual checkup',
-          filename: 'chest_xray_2023.pdf'
-        }
-      ]);
-    } catch (error) {
-      toast.error('Failed to load documents');
-    } finally {
-      setLoading(false);
-    }
+    // Managed alongside fetchMedicalHistory
   };
 
   const handleFileUpload = (e) => {
@@ -103,14 +75,14 @@ const MedicalHistory = () => {
         toast.error('File size must be less than 10MB');
         return;
       }
-      
+
       // Check file type
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
       if (!allowedTypes.includes(file.type)) {
         toast.error('Only PDF and image files are allowed');
         return;
       }
-      
+
       setNewDocument({ ...newDocument, file });
     }
   };
@@ -130,9 +102,10 @@ const MedicalHistory = () => {
       formData.append('description', newDocument.description);
       formData.append('file', newDocument.file);
 
-      // Mock upload - in real implementation, this would call an API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await axios.post('/api/patient/documents/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
       toast.success('Document uploaded successfully');
       setShowUploadModal(false);
       setNewDocument({
@@ -142,7 +115,7 @@ const MedicalHistory = () => {
         description: '',
         file: null
       });
-      fetchDocuments();
+      fetchMedicalHistory();
     } catch (error) {
       toast.error('Failed to upload document');
     } finally {
@@ -153,8 +126,8 @@ const MedicalHistory = () => {
   const deleteDocument = async (documentId) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
       try {
-        // Mock delete - in real implementation, this would call an API
-        setDocuments(documents.filter(doc => doc.id !== documentId));
+        await axios.delete(`/api/patient/documents/${documentId}`);
+        setDocuments(documents.filter(doc => doc._id !== documentId));
         toast.success('Document deleted successfully');
       } catch (error) {
         toast.error('Failed to delete document');
@@ -206,7 +179,7 @@ const MedicalHistory = () => {
               <Heart className="h-6 w-6 text-red-600 mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Medical Information</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Blood Group</h3>
@@ -257,7 +230,7 @@ const MedicalHistory = () => {
               <AlertCircle className="h-6 w-6 text-yellow-600 mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Emergency Information</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Emergency Contact</h3>
@@ -284,7 +257,7 @@ const MedicalHistory = () => {
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Last Checkup</h3>
                 <div className="flex items-center text-sm text-gray-700">
                   <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                  {new Date(medicalHistory.lastCheckup).toLocaleDateString()}
+                  {medicalHistory.lastCheckup ? new Date(medicalHistory.lastCheckup).toLocaleDateString() : 'No record'}
                 </div>
               </div>
             </div>
@@ -299,7 +272,7 @@ const MedicalHistory = () => {
             <Activity className="h-6 w-6 text-green-600 mr-2" />
             <h2 className="text-lg font-semibold text-gray-900">Vaccination Records</h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -356,7 +329,7 @@ const MedicalHistory = () => {
         {documents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {documents.map((document) => (
-              <div key={document.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={document._id || document.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 text-blue-600 mr-2" />
@@ -366,14 +339,14 @@ const MedicalHistory = () => {
                     </div>
                   </div>
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getDocumentTypeColor(document.type)}`}>
-                    {document.type.replace('_', ' ')}
+                    {document.type ? document.type.replace('_', ' ') : 'other'}
                   </span>
                 </div>
-                
+
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                   {document.description}
                 </p>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-xs text-gray-500">
                     <Calendar className="h-3 w-3 mr-1" />
@@ -384,7 +357,7 @@ const MedicalHistory = () => {
                       View
                     </button>
                     <button
-                      onClick={() => deleteDocument(document.id)}
+                      onClick={() => deleteDocument(document._id || document.id)}
                       className="text-red-600 hover:text-red-800 text-sm"
                     >
                       Delete
@@ -423,7 +396,7 @@ const MedicalHistory = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -432,7 +405,7 @@ const MedicalHistory = () => {
                 <input
                   type="text"
                   value={newDocument.title}
-                  onChange={(e) => setNewDocument({...newDocument, title: e.target.value})}
+                  onChange={(e) => setNewDocument({ ...newDocument, title: e.target.value })}
                   className="input-field"
                   placeholder="Enter document title"
                 />
@@ -444,7 +417,7 @@ const MedicalHistory = () => {
                 </label>
                 <select
                   value={newDocument.type}
-                  onChange={(e) => setNewDocument({...newDocument, type: e.target.value})}
+                  onChange={(e) => setNewDocument({ ...newDocument, type: e.target.value })}
                   className="input-field"
                 >
                   {documentTypes.map(type => (
@@ -462,7 +435,7 @@ const MedicalHistory = () => {
                 <input
                   type="date"
                   value={newDocument.date}
-                  onChange={(e) => setNewDocument({...newDocument, date: e.target.value})}
+                  onChange={(e) => setNewDocument({ ...newDocument, date: e.target.value })}
                   className="input-field"
                 />
               </div>
@@ -473,7 +446,7 @@ const MedicalHistory = () => {
                 </label>
                 <textarea
                   value={newDocument.description}
-                  onChange={(e) => setNewDocument({...newDocument, description: e.target.value})}
+                  onChange={(e) => setNewDocument({ ...newDocument, description: e.target.value })}
                   className="input-field"
                   rows="3"
                   placeholder="Enter document description"

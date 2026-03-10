@@ -60,6 +60,17 @@ const AppointmentManagement = () => {
     }
   };
 
+  const seedDoctors = async () => {
+    try {
+      const response = await axios.post('/api/appointments/doctors/seed');
+      toast.success(response.data.message);
+      fetchDoctors(); // Refresh the doctors list
+    } catch (error) {
+      console.error('Failed to seed doctors:', error);
+      toast.error('Failed to seed doctors');
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const response = await axios.get('/api/appointments/stats/overview');
@@ -222,6 +233,16 @@ const AppointmentManagement = () => {
                 </option>
               ))}
             </select>
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={seedDoctors}
+              className="btn btn-primary flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Seed Doctors
+            </button>
           </div>
         </div>
 

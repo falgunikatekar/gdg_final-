@@ -51,5 +51,5 @@
     "@types/react-dom": "^18.2.7",
     "typescript": "^4.9.5"
   },
-  "proxy": "http://localhost:5000"
+  "proxy": "http://localhost:5001"
 }
