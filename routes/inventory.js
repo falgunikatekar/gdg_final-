@@ -9,6 +9,102 @@ router.get('/', hospitalAuth, async (req, res) => {
     const { status, category, page = 1, limit = 20, search } = req.query;
     const hospitalId = req.user._id;
     
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      let mockMedicines = global.mockMedicines || [
+        {
+          _id: 'med_1',
+          name: 'Paracetamol',
+          manufacturer: 'PharmaCorp',
+          category: 'Pain Relief',
+          description: 'Pain relief medication',
+          unitPrice: 5.99,
+          stock: 150,
+          minStockLevel: 20,
+          batchNumber: 'PC2024001',
+          manufactureDate: new Date('2024-01-15'),
+          expiryDate: new Date('2025-01-15'),
+          status: 'available',
+          hospital: hospitalId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: 'med_2',
+          name: 'Amoxicillin',
+          manufacturer: 'MediLab',
+          category: 'Antibiotic',
+          description: 'Antibiotic medication',
+          unitPrice: 12.50,
+          stock: 75,
+          minStockLevel: 15,
+          batchNumber: 'AM2024002',
+          manufactureDate: new Date('2024-02-01'),
+          expiryDate: new Date('2024-08-01'),
+          status: 'available',
+          hospital: hospitalId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: 'med_3',
+          name: 'Ibuprofen',
+          manufacturer: 'HealthPharm',
+          category: 'Pain Relief',
+          description: 'Anti-inflammatory medication',
+          unitPrice: 8.75,
+          stock: 5,
+          minStockLevel: 10,
+          batchNumber: 'IB2024003',
+          manufactureDate: new Date('2024-03-01'),
+          expiryDate: new Date('2025-03-01'),
+          status: 'low_stock',
+          hospital: hospitalId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+      
+      // Initialize global mock medicines if not exists
+      if (!global.mockMedicines) {
+        global.mockMedicines = mockMedicines;
+      } else {
+        mockMedicines = global.mockMedicines;
+      }
+      
+      // Apply filters
+      let filteredMedicines = mockMedicines.filter(med => med.hospital === hospitalId);
+      
+      if (status) {
+        filteredMedicines = filteredMedicines.filter(med => med.status === status);
+      }
+      
+      if (category) {
+        filteredMedicines = filteredMedicines.filter(med => med.category === category);
+      }
+      
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredMedicines = filteredMedicines.filter(med =>
+          med.name.toLowerCase().includes(searchLower) ||
+          med.manufacturer.toLowerCase().includes(searchLower) ||
+          med.batchNumber.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedMedicines = filteredMedicines.slice(startIndex, endIndex);
+      
+      return res.json({
+        medicines: paginatedMedicines,
+        totalPages: Math.ceil(filteredMedicines.length / limit),
+        currentPage: parseInt(page),
+        total: filteredMedicines.length
+      });
+    }
+    
     const query = { hospital: hospitalId };
     
     if (status) query.status = status;
@@ -111,6 +207,44 @@ router.post('/', hospitalAuth, async (req, res) => {
       storageConditions,
       supplier
     } = req.body;
+    
+    const hospitalId = req.user._id;
+    
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      // Mock medicine addition
+      const mockMedicine = {
+        _id: `med_${Date.now()}`,
+        name,
+        manufacturer,
+        category,
+        description,
+        unitPrice,
+        stock,
+        minStockLevel: minStockLevel || 10,
+        batchNumber,
+        manufactureDate: new Date(manufactureDate),
+        expiryDate: new Date(expiryDate),
+        storageConditions,
+        supplier,
+        hospital: hospitalId,
+        status: new Date(expiryDate) < new Date() ? 'expired' : 
+                (stock <= (minStockLevel || 10) ? 'low_stock' : 'available'),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Add to global mock medicines if it doesn't exist
+      if (!global.mockMedicines) {
+        global.mockMedicines = [];
+      }
+      global.mockMedicines.push(mockMedicine);
+      
+      return res.status(201).json({ 
+        message: 'Medicine added successfully', 
+        medicine: mockMedicine 
+      });
+    }
     
     const medicine = new Medicine({
       name,
@@ -262,6 +396,60 @@ router.delete('/:medicineId', hospitalAuth, async (req, res) => {
 });
 
 // Get inventory statistics
+router.get('/stats', hospitalAuth, async (req, res) => {
+  try {
+    const hospitalId = req.user._id;
+    
+    const stats = await Medicine.aggregate([
+      { $match: { hospital: hospitalId } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalStock: { $sum: '$stock' },
+          totalValue: { $sum: { $multiply: ['$stock', '$unitPrice'] } }
+        }
+      }
+    ]);
+    
+    const categoryStats = await Medicine.aggregate([
+      { $match: { hospital: hospitalId } },
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 },
+          totalStock: { $sum: '$stock' }
+        }
+      }
+    ]);
+    
+    const expiringSoonCount = await Medicine.countDocuments({
+      hospital: hospitalId,
+      expiryDate: { 
+        $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        $gte: new Date()
+      },
+      status: { $ne: 'expired' }
+    });
+    
+    const expiredCount = await Medicine.countDocuments({
+      hospital: hospitalId,
+      expiryDate: { $lt: new Date() }
+    });
+    
+    res.json({
+      statusStats: stats,
+      categoryStats,
+      expiringSoonCount,
+      expiredCount
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get inventory statistics overview
 router.get('/stats/overview', hospitalAuth, async (req, res) => {
   try {
     const hospitalId = req.user._id;

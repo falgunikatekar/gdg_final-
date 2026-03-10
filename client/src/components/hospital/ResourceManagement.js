@@ -1,28 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import { Bed, DoorOpen, Plus, Edit2, Save, X, Activity, AlertCircle } from 'lucide-react';
 
 const ResourceManagement = () => {
+  const { user, isAuthenticated, token } = useAuth();
   const [hospitalData, setHospitalData] = useState(null);
+  const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [equipmentLoading, setEquipmentLoading] = useState(true);
   const [editingBeds, setEditingBeds] = useState(false);
   const [editingRooms, setEditingRooms] = useState(false);
   const [newEquipment, setNewEquipment] = useState({ name: '', type: '', total: 0 });
   const [showAddEquipment, setShowAddEquipment] = useState(false);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error('Please login to access this page');
+      return;
+    }
     fetchHospitalData();
-  }, []);
+    fetchEquipment();
+  }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    // Set overall loading to false when both data are loaded
+    if (hospitalData && !equipmentLoading) {
+      setLoading(false);
+    }
+  }, [hospitalData, equipmentLoading]);
 
   const fetchHospitalData = async () => {
     try {
       const response = await axios.get('/api/hospital/dashboard');
       setHospitalData(response.data.hospital);
     } catch (error) {
-      toast.error('Failed to load resource data');
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please login again.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to load resource data');
+      }
+    }
+  };
+
+  const fetchEquipment = async () => {
+    try {
+      const response = await axios.get('/api/equipment');
+      setEquipment(response.data);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please login again.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to load equipment');
+      }
     } finally {
-      setLoading(false);
+      setEquipmentLoading(false);
     }
   };
 
@@ -61,14 +94,39 @@ const ResourceManagement = () => {
   };
 
   const addEquipment = async () => {
+    // Check authentication first
+    if (!isAuthenticated || !token) {
+      toast.error('Please login to add equipment');
+      return;
+    }
+
+    // Validation
+    if (!newEquipment.name || !newEquipment.type || newEquipment.total <= 0) {
+      toast.error('Please fill all equipment details with valid quantities');
+      return;
+    }
+
     try {
-      await axios.post('/api/hospital/equipment', newEquipment);
+      const response = await axios.post('/api/equipment', newEquipment);
       toast.success('Equipment added successfully');
       setNewEquipment({ name: '', type: '', total: 0 });
       setShowAddEquipment(false);
-      fetchHospitalData();
+      fetchEquipment(); // Fetch equipment instead of hospital data
     } catch (error) {
-      toast.error('Failed to add equipment');
+      let errorMessage = 'Failed to add equipment';
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = 'Authentication failed. Please login again.';
+        } else {
+          errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -278,28 +336,33 @@ const ResourceManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <input
                 type="text"
-                placeholder="Equipment name"
+                placeholder="Enter equipment name (e.g., Philips Monitor, GE Ventilator)"
                 value={newEquipment.name}
                 onChange={(e) => setNewEquipment({...newEquipment, name: e.target.value})}
                 className="input-field"
+                required
               />
               <input
                 type="text"
-                placeholder="Type (e.g., Ventilator)"
+                placeholder="Enter equipment type (e.g., Ventilator, Monitor, X-Ray)"
                 value={newEquipment.type}
                 onChange={(e) => setNewEquipment({...newEquipment, type: e.target.value})}
                 className="input-field"
+                required
               />
               <input
                 type="number"
-                placeholder="Total quantity"
+                placeholder="Enter total quantity (e.g., 5 units)"
                 value={newEquipment.total}
                 onChange={(e) => setNewEquipment({...newEquipment, total: parseInt(e.target.value) || 0})}
                 className="input-field"
+                min="1"
+                required
               />
               <div className="flex space-x-2">
-                <button onClick={addEquipment} className="btn btn-success">
+                <button onClick={addEquipment} className="btn btn-success flex-1">
                   <Save className="h-4 w-4" />
+                  Add Equipment
                 </button>
                 <button
                   onClick={() => {
@@ -316,7 +379,7 @@ const ResourceManagement = () => {
         )}
         
         <div className="p-6">
-          {hospitalData.equipment && hospitalData.equipment.length > 0 ? (
+          {equipment && equipment.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -342,7 +405,7 @@ const ResourceManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {hospitalData.equipment.map((equipment) => (
+                  {equipment.map((equipment) => (
                     <tr key={equipment._id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {equipment.name}

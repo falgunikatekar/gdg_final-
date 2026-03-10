@@ -6,10 +6,44 @@ const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
 const router = express.Router();
 
-// Seed doctors with specialties (for development)
+// Seed doctors for the hospital
 router.post('/doctors/seed', hospitalAuth, async (req, res) => {
   try {
     const hospitalId = req.user._id;
+    
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      // Create mock doctors
+      const mockDoctors = [
+        { _id: 'doc_1', name: 'Dr. Rajesh Sharma', specialization: 'Cardiology', department: 'Cardiology', experience: 15 },
+        { _id: 'doc_2', name: 'Dr. Priya Nair', specialization: 'Pediatrics', department: 'Pediatrics', experience: 12 },
+        { _id: 'doc_3', name: 'Dr. Amit Patel', specialization: 'Orthopedics', department: 'Orthopedics', experience: 18 },
+        { _id: 'doc_4', name: 'Dr. Sneha Reddy', specialization: 'Gynecology', department: 'Gynecology', experience: 10 },
+        { _id: 'doc_5', name: 'Dr. Vikram Malhotra', specialization: 'Neurology', department: 'Neurology', experience: 20 },
+        { _id: 'doc_6', name: 'Dr. Bharat Ramrao Sontakke', specialization: 'General (Anatomy)', department: 'Anatomy', experience: 25 },
+        { _id: 'doc_7', name: 'Dr. Amol Dube', specialization: 'General Medicine', department: 'General Medicine', experience: 16 },
+        { _id: 'doc_8', name: 'Dr. Akash Bang', specialization: 'Pediatrics/Hematology', department: 'Pediatrics', experience: 14 },
+        { _id: 'doc_9', name: 'Dr. Anand Chellappan', specialization: 'Nephrology', department: 'Nephrology', experience: 22 },
+        { _id: 'doc_10', name: 'Dr. Chetana Ratnaparkhi', specialization: 'Radio Diagnosis', department: 'Radiology', experience: 13 }
+      ];
+      
+      global.mockDoctors = mockDoctors;
+      
+      res.json({ 
+        message: 'Doctors seeded successfully in mock mode', 
+        doctors: mockDoctors.map(d => ({
+          id: d._id,
+          name: d.name,
+          specialization: d.specialization,
+          department: d.department,
+          experience: d.experience
+        }))
+      });
+      return;
+    }
+    
+    // Normal database operations
+    const Doctor = require('../models/Doctor');
     
     // Clear existing doctors for this hospital
     await Doctor.deleteMany({ hospital: hospitalId });
@@ -25,9 +59,9 @@ router.post('/doctors/seed', hospitalAuth, async (req, res) => {
         department: 'Cardiology',
         hospital: hospitalId,
         schedule: [
-          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
-          { day: 'Wednesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
-          { day: 'Friday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 }
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 }
         ]
       },
       {
@@ -40,9 +74,9 @@ router.post('/doctors/seed', hospitalAuth, async (req, res) => {
         department: 'Pediatrics',
         hospital: hospitalId,
         schedule: [
-          { day: 'Tuesday', startTime: '08:00', endTime: '16:00', maxAppointments: 25 },
-          { day: 'Thursday', startTime: '08:00', endTime: '16:00', maxAppointments: 25 },
-          { day: 'Saturday', startTime: '09:00', endTime: '14:00', maxAppointments: 15 }
+          { day: 'Monday', startTime: '08:00', endTime: '16:00', maxAppointments: 20 },
+          { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 20 },
+          { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 20 }
         ]
       },
       {
@@ -51,13 +85,13 @@ router.post('/doctors/seed', hospitalAuth, async (req, res) => {
         email: 'amit.patel@hospital.com',
         phone: '+91 9876543213',
         experience: 18,
-        qualification: 'MS (Orthopedics), MCh',
+        qualification: 'MS, MCh (Orthopedics)',
         department: 'Orthopedics',
         hospital: hospitalId,
         schedule: [
-          { day: 'Monday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 },
-          { day: 'Wednesday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 },
-          { day: 'Friday', startTime: '10:00', endTime: '18:00', maxAppointments: 15 }
+          { day: 'Tuesday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
+          { day: 'Thursday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
+          { day: 'Saturday', startTime: '08:00', endTime: '14:00', maxAppointments: 8 }
         ]
       },
       {
@@ -66,13 +100,13 @@ router.post('/doctors/seed', hospitalAuth, async (req, res) => {
         email: 'sneha.reddy@hospital.com',
         phone: '+91 9876543214',
         experience: 10,
-        qualification: 'MD, DGO (Gynecology)',
+        qualification: 'MD, DNB (Gynecology)',
         department: 'Gynecology',
         hospital: hospitalId,
         schedule: [
-          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
-          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
-          { day: 'Saturday', startTime: '09:00', endTime: '15:00', maxAppointments: 18 }
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Wednesday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Friday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 }
         ]
       },
       {
@@ -88,6 +122,82 @@ router.post('/doctors/seed', hospitalAuth, async (req, res) => {
           { day: 'Monday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
           { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
           { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 }
+        ]
+      },
+      {
+        name: 'Dr. Bharat Ramrao Sontakke',
+        specialization: 'General (Anatomy)',
+        email: 'bharat.sontakke@hospital.com',
+        phone: '+91 9876543216',
+        experience: 25,
+        qualification: 'MD, MS (Anatomy)',
+        department: 'Anatomy',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 10 },
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 10 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 10 }
+        ]
+      },
+      {
+        name: 'Dr. Amol Dube',
+        specialization: 'General Medicine',
+        email: 'amol.dube@hospital.com',
+        phone: '+91 9876543217',
+        experience: 16,
+        qualification: 'MD (General Medicine)',
+        department: 'General Medicine',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '08:00', endTime: '16:00', maxAppointments: 18 },
+          { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 18 },
+          { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 18 }
+        ]
+      },
+      {
+        name: 'Dr. Akash Bang',
+        specialization: 'Pediatrics/Hematology',
+        email: 'akash.bang@hospital.com',
+        phone: '+91 9876543218',
+        experience: 14,
+        qualification: 'MD, DNB (Pediatrics), DM (Hematology)',
+        department: 'Pediatrics',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 12 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 12 },
+          { day: 'Saturday', startTime: '09:00', endTime: '15:00', maxAppointments: 8 }
+        ]
+      },
+      {
+        name: 'Dr. Anand Chellappan',
+        specialization: 'Nephrology',
+        email: 'anand.chellappan@hospital.com',
+        phone: '+91 9876543219',
+        experience: 22,
+        qualification: 'MD, DM (Nephrology)',
+        department: 'Nephrology',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '08:00', endTime: '16:00', maxAppointments: 10 },
+          { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 10 },
+          { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 10 }
+        ]
+      },
+      {
+        name: 'Dr. Chetana Ratnaparkhi',
+        specialization: 'Radio Diagnosis',
+        email: 'chetana.ratnaparkhi@hospital.com',
+        phone: '+91 9876543220',
+        experience: 13,
+        qualification: 'MD, DNB (Radiology)',
+        department: 'Radiology',
+        hospital: hospitalId,
+        schedule: [
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Friday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 }
         ]
       }
     ];
@@ -114,6 +224,56 @@ router.get('/doctors/available', hospitalAuth, async (req, res) => {
   try {
     const { date, specialization } = req.query;
     const hospitalId = req.user._id;
+    
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      let mockDoctors = [
+        { _id: 'doc_1', name: 'Dr. Rajesh Sharma', specialization: 'Cardiology', department: 'Cardiology', experience: 15, qualification: 'MD, DM (Cardiology)', available: true },
+        { _id: 'doc_2', name: 'Dr. Priya Nair', specialization: 'Pediatrics', department: 'Pediatrics', experience: 12, qualification: 'MD (Pediatrics)', available: true },
+        { _id: 'doc_3', name: 'Dr. Amit Patel', specialization: 'Orthopedics', department: 'Orthopedics', experience: 18, qualification: 'MS (Orthopedics), MCh', available: true },
+        { _id: 'doc_4', name: 'Dr. Sneha Reddy', specialization: 'Gynecology', department: 'Gynecology', experience: 10, qualification: 'MD, DGO (Gynecology)', available: true },
+        { _id: 'doc_5', name: 'Dr. Vikram Malhotra', specialization: 'Neurology', department: 'Neurology', experience: 20, qualification: 'MD, DM (Neurology)', available: true },
+        { _id: 'doc_6', name: 'Dr. Bharat Ramrao Sontakke', specialization: 'General Anatomy', department: 'Anatomy', experience: 25, qualification: 'MD, MS (Anatomy)', available: true },
+        { _id: 'doc_7', name: 'Dr. Amol Dube', specialization: 'General Medicine', department: 'General Medicine', experience: 22, qualification: 'MD (General Medicine)', available: true },
+        { _id: 'doc_8', name: 'Dr. Akash Bang', specialization: 'Pediatrics/Hematology', department: 'Pediatrics', experience: 16, qualification: 'MD (Pediatrics), DM (Hematology)', available: true },
+        { _id: 'doc_9', name: 'Dr. Anand Chellappan', specialization: 'Nephrology', department: 'Nephrology', experience: 18, qualification: 'MD, DM (Nephrology)', available: true },
+        { _id: 'doc_10', name: 'Dr. Chetana Ratnaparkhi', specialization: 'Radio Diagnosis', department: 'Radio Diagnosis', experience: 14, qualification: 'MD, DNB (Radio Diagnosis)', available: true }
+      ];
+      
+      // Filter by specialization if provided
+      if (specialization) {
+        mockDoctors = mockDoctors.filter(d => d.specialization.toLowerCase().includes(specialization.toLowerCase()));
+      }
+      
+      // Add mock schedules for all doctors
+      mockDoctors = mockDoctors.map(doctor => ({
+        ...doctor,
+        schedule: [
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Wednesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Friday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 }
+        ]
+      }));
+      
+      // If date is provided, check availability for that date
+      if (date) {
+        const targetDate = new Date(date);
+        const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        const doctorsWithAvailability = mockDoctors.map(doctor => {
+          const daySchedule = doctor.schedule.find(s => s.day === dayOfWeek);
+          return {
+            ...doctor,
+            isAvailable: !!daySchedule,
+            schedule: daySchedule || null
+          };
+        });
+        
+        return res.json(doctorsWithAvailability);
+      } else {
+        return res.json(mockDoctors);
+      }
+    }
     
     let query = { hospital: hospitalId, available: true };
     if (specialization) query.specialization = specialization;

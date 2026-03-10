@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const doctorSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    enum: ['Dr.', 'Prof.', 'Assoc. Prof.', 'Asst. Prof.'],
+    default: 'Dr.'
+  },
   name: {
     type: String,
     required: true

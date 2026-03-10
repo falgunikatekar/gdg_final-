@@ -5,16 +5,13 @@ import {
   Package,
   Plus,
   Search,
-  Filter,
   AlertTriangle,
   Clock,
   TrendingDown,
   Edit2,
   Trash2,
   Save,
-  X,
-  Calendar,
-  DollarSign
+  X
 } from 'lucide-react';
 
 const InventoryManagement = () => {
@@ -77,10 +74,10 @@ const InventoryManagement = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('/api/inventory/stats/overview');
+      const response = await axios.get('/api/inventory/stats');
       setStats(response.data);
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      toast.error('Failed to load statistics');
     }
   };
 
@@ -89,7 +86,7 @@ const InventoryManagement = () => {
       const response = await axios.get('/api/inventory/expiring-soon');
       setExpiringSoon(response.data);
     } catch (error) {
-      console.error('Failed to load expiring medicines:', error);
+      toast.error('Failed to load expiring medicines');
     }
   };
 
@@ -98,7 +95,7 @@ const InventoryManagement = () => {
       const response = await axios.get('/api/inventory/low-stock');
       setLowStock(response.data);
     } catch (error) {
-      console.error('Failed to load low stock medicines:', error);
+      toast.error('Failed to load low stock medicines');
     }
   };
 
@@ -122,7 +119,6 @@ const InventoryManagement = () => {
     }
 
     try {
-      console.log('Adding medicine:', newMedicine);
       const response = await axios.post('/api/inventory', newMedicine);
       toast.success('Medicine added successfully');
       setNewMedicine({
@@ -130,21 +126,18 @@ const InventoryManagement = () => {
         manufacturer: '',
         category: '',
         description: '',
-        unitPrice: 0,
-        stock: 0,
-        minStockLevel: 10,
         batchNumber: '',
         manufactureDate: '',
         expiryDate: '',
-        supplier: { name: '', contact: '', email: '' }
+        stock: 0,
+        unitPrice: 0,
+        reorderLevel: 10
       });
       setShowAddForm(false);
       fetchInventoryData();
       fetchStats();
     } catch (error) {
-      console.error('Error adding medicine:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to add medicine';
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.message || 'Failed to add medicine');
     }
   };
 

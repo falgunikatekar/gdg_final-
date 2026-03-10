@@ -99,6 +99,81 @@ const seedDoctors = async () => {
           { day: 'Wednesday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 },
           { day: 'Friday', startTime: '08:00', endTime: '16:00', maxAppointments: 12 }
         ]
+      },
+      {
+        name: 'Dr. Bharat Ramrao Sontakke',
+        specialization: 'General Anatomy',
+        email: 'bharat.sontakke@hospital.com',
+        phone: '+91 9876543216',
+        experience: 25,
+        qualification: 'MD, MS (Anatomy)',
+        department: 'Anatomy',
+        hospital: hospital._id,
+        schedule: [
+          { day: 'Monday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 15 }
+        ]
+      },
+      {
+        name: 'Dr. Amol Dube',
+        specialization: 'General Medicine',
+        email: 'amol.dube@hospital.com',
+        phone: '+91 9876543217',
+        experience: 22,
+        qualification: 'MD (General Medicine)',
+        department: 'General Medicine',
+        hospital: hospital._id,
+        schedule: [
+          { day: 'Monday', startTime: '08:00', endTime: '18:00', maxAppointments: 25 },
+          { day: 'Wednesday', startTime: '08:00', endTime: '18:00', maxAppointments: 25 },
+          { day: 'Friday', startTime: '08:00', endTime: '18:00', maxAppointments: 25 }
+        ]
+      },
+      {
+        name: 'Dr. Akash Bang',
+        specialization: 'Pediatrics/Hematology',
+        email: 'akash.bang@hospital.com',
+        phone: '+91 9876543218',
+        experience: 16,
+        qualification: 'MD (Pediatrics), DM (Hematology)',
+        department: 'Pediatrics',
+        hospital: hospital._id,
+        schedule: [
+          { day: 'Tuesday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Thursday', startTime: '09:00', endTime: '17:00', maxAppointments: 20 },
+          { day: 'Saturday', startTime: '09:00', endTime: '15:00', maxAppointments: 18 }
+        ]
+      },
+      {
+        name: 'Dr. Anand Chellappan',
+        specialization: 'Nephrology',
+        email: 'anand.chellappan@hospital.com',
+        phone: '+91 9876543219',
+        experience: 18,
+        qualification: 'MD, DM (Nephrology)',
+        department: 'Nephrology',
+        hospital: hospital._id,
+        schedule: [
+          { day: 'Monday', startTime: '10:00', endTime: '18:00', maxAppointments: 12 },
+          { day: 'Wednesday', startTime: '10:00', endTime: '18:00', maxAppointments: 12 },
+          { day: 'Friday', startTime: '10:00', endTime: '18:00', maxAppointments: 12 }
+        ]
+      },
+      {
+        name: 'Dr. Chetana Ratnaparkhi',
+        specialization: 'Radio Diagnosis',
+        email: 'chetana.ratnaparkhi@hospital.com',
+        phone: '+91 9876543220',
+        experience: 14,
+        qualification: 'MD, DNB (Radio Diagnosis)',
+        department: 'Radio Diagnosis',
+        hospital: hospital._id,
+        schedule: [
+          { day: 'Tuesday', startTime: '08:00', endTime: '16:00', maxAppointments: 18 },
+          { day: 'Thursday', startTime: '08:00', endTime: '16:00', maxAppointments: 18 },
+          { day: 'Saturday', startTime: '09:00', endTime: '14:00', maxAppointments: 15 }
+        ]
       }
     ];
 

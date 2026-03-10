@@ -48,6 +48,59 @@ router.post('/upload', hospitalAuth, upload.array('images', 5), async (req, res)
     const { patientId, type, title, description, testDate } = req.body;
     const hospitalId = req.user._id;
 
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      // Find the patient in mock patients array
+      const mockPatients = global.mockPatients || [];
+      const patient = mockPatients.find(p => p._id === patientId) || {
+        _id: patientId,
+        name: 'Mock Patient',
+        age: 30,
+        contact: '9876543210'
+      };
+
+      // Create mock report
+      const mockReport = {
+        _id: `report_${Date.now()}`,
+        patient: {
+          _id: patient._id,
+          name: patient.name,
+          age: patient.age,
+          contact: patient.contact
+        },
+        doctor: {
+          _id: 'doctor_1',
+          name: 'Dr. Rajesh Sharma'
+        },
+        hospital: hospitalId,
+        type,
+        title,
+        description,
+        testDate: new Date(testDate),
+        images: req.files ? req.files.map(file => ({
+          filename: file.filename,
+          originalName: file.originalname,
+          path: file.path,
+          size: file.size,
+          mimetype: file.mimetype
+        })) : [],
+        status: 'completed',
+        createdAt: new Date(),
+        summary: 'Mock report summary for demonstration purposes.'
+      };
+
+      // Initialize mock reports array if not exists
+      if (!global.mockReports) {
+        global.mockReports = [];
+      }
+      global.mockReports.push(mockReport);
+
+      return res.status(201).json({
+        message: 'Report uploaded successfully (Mock Mode)',
+        report: mockReport
+      });
+    }
+
     // Validate patient exists
     const patient = await Patient.findById(patientId);
     if (!patient) {
@@ -236,6 +289,63 @@ router.get('/', hospitalAuth, async (req, res) => {
   try {
     const { status, type, patientId, page = 1, limit = 20 } = req.query;
     const hospitalId = req.user._id;
+
+    // Check if we're in mock mode
+    if (global.mockMode) {
+      let mockReports = global.mockReports || [
+        {
+          _id: 'report_1',
+          patient: { _id: 'pat_1', name: 'John Doe', age: 45, contact: '9876543210' },
+          doctor: { _id: 'doctor_1', name: 'Dr. Rajesh Sharma', specialization: 'Cardiology' },
+          hospital: hospitalId,
+          type: 'blood_test',
+          title: 'Complete Blood Count',
+          description: 'Routine blood test for annual checkup',
+          testDate: new Date('2024-01-15'),
+          status: 'completed',
+          images: [],
+          createdAt: new Date('2024-01-15'),
+          summary: 'All blood parameters are within normal range.'
+        },
+        {
+          _id: 'report_2',
+          patient: { _id: 'pat_2', name: 'Jane Smith', age: 32, contact: '9876543211' },
+          doctor: { _id: 'doctor_2', name: 'Dr. Priya Nair', specialization: 'Pediatrics' },
+          hospital: hospitalId,
+          type: 'x_ray',
+          title: 'Chest X-Ray',
+          description: 'X-ray for respiratory infection check',
+          testDate: new Date('2024-02-01'),
+          status: 'completed',
+          images: [],
+          createdAt: new Date('2024-02-01'),
+          summary: 'Clear lungs, no signs of infection.'
+        }
+      ];
+
+      // Apply filters
+      if (status) {
+        mockReports = mockReports.filter(report => report.status === status);
+      }
+      if (type) {
+        mockReports = mockReports.filter(report => report.type === type);
+      }
+      if (patientId) {
+        mockReports = mockReports.filter(report => report.patient._id === patientId);
+      }
+
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedReports = mockReports.slice(startIndex, endIndex);
+
+      return res.json({
+        reports: paginatedReports,
+        totalPages: Math.ceil(mockReports.length / limit),
+        currentPage: parseInt(page),
+        total: mockReports.length
+      });
+    }
 
     const query = { hospital: hospitalId };
     if (status) query.status = status;

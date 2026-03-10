@@ -15,12 +15,14 @@ import {
   CheckCircle,
   AlertCircle,
   Download,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import PatientOverview from '../components/patient/PatientOverview';
 import PatientAppointments from '../components/patient/PatientAppointments';
 import PatientReports from '../components/patient/PatientReports';
 import MedicalHistory from '../components/patient/MedicalHistory';
+import PatientEmergency from '../components/patient/PatientEmergency';
 
 const PatientDashboard = () => {
   const { user, logout } = useAuth();
@@ -33,6 +35,7 @@ const PatientDashboard = () => {
     { id: 'appointments', label: 'Appointments', icon: Calendar, path: '/patient/appointments' },
     { id: 'reports', label: 'Medical Reports', icon: FileText, path: '/patient/reports' },
     { id: 'history', label: 'Medical History', icon: Heart, path: '/patient/history' },
+    { id: 'emergency', label: 'Emergency', icon: AlertTriangle, path: '/patient/emergency' },
   ];
 
   const handleLogout = () => {
@@ -112,6 +115,7 @@ const PatientDashboard = () => {
             <Route path="/appointments" element={<PatientAppointments />} />
             <Route path="/reports" element={<PatientReports />} />
             <Route path="/history" element={<MedicalHistory />} />
+            <Route path="/emergency" element={<PatientEmergency />} />
           </Routes>
         </main>
       </div>

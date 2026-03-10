@@ -1,0 +1,105 @@
+trf<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .form-group { margin: 10px 0; }
+        input { padding: 8px; margin: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>Login Test</h1>
+    
+    <div class="form-group">
+        <label>Username:</label>
+        <input type="text" id="username" value="admin">
+    </div>
+    
+    <div class="form-group">
+        <label>Password:</label>
+        <input type="password" id="password" value="admin123">
+    </div>
+    
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testServer()">Test Server</button>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        async function testServer() {
+            try {
+                const response = await fetch('http://localhost:5001/api/test/test');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<div class="success">Server Test: ${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="error">Server Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userType: 'hospital',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('result').innerHTML = 
+                        `<div class="success">Login Successful! Token: ${data.token.substring(0, 50)}...</div>`;
+                    
+                    // Test the token
+                    testToken(data.token);
+                } else {
+                    document.getElementById('result').innerHTML = 
+                        `<div class="error">Login Failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div class="error">Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testToken(token) {
+            try {
+                const response = await fetch('http://localhost:5001/api/hospital/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('result').innerHTML += 
+                        `<div class="success">Token Works! Dashboard loaded.</div>`;
+                } else {
+                    document.getElementById('result').innerHTML += 
+                        `<div class="error">Token Failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML += 
+                    `<div class="error">Token Test Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

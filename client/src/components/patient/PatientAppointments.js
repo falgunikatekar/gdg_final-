@@ -4,17 +4,18 @@ import toast from 'react-hot-toast';
 import {
   Calendar,
   Clock,
-  Users,
-  Plus,
-  Search,
-  Filter,
+  User,
   CheckCircle,
   XCircle,
   AlertCircle,
+  Plus,
+  Search,
+  Filter,
   Eye,
-  X,
+  Video,
   MapPin,
-  Phone
+  Phone,
+  Star
 } from 'lucide-react';
 
 const PatientAppointments = () => {
@@ -26,37 +27,37 @@ const PatientAppointments = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [bookingStep, setBookingStep] = useState(1);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [newAppointment, setNewAppointment] = useState({
     doctorId: '',
     date: '',
     time: '',
     type: 'consultation',
-    symptoms: '',
+    symptoms: [],
     notes: ''
   });
 
   const appointmentTypes = [
     { value: 'consultation', label: 'General Consultation' },
-    { value: 'follow_up', label: 'Follow-up' },
+    { value: 'follow_up', label: 'Follow-up Visit' },
     { value: 'emergency', label: 'Emergency' },
-    { value: 'test', label: 'Medical Test' }
+    { value: 'video_consultation', label: 'Video Consultation' },
+    { value: 'home_visit', label: 'Home Visit' }
+  ];
+
+  const commonSymptoms = [
+    'Fever', 'Cough', 'Headache', 'Chest Pain', 'Fatigue', 
+    'Nausea', 'Back Pain', 'Sore Throat', 'Shortness of Breath', 'Dizziness'
   ];
 
   useEffect(() => {
     fetchAppointments();
     fetchDoctors();
-  }, [statusFilter]);
+  }, []);
 
   const fetchAppointments = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter) params.append('status', statusFilter);
-      
-      const response = await axios.get(`/api/appointments/patient?${params}`);
+      const response = await axios.get('/api/patient/appointments');
       setAppointments(response.data.appointments);
     } catch (error) {
       toast.error('Failed to load appointments');
@@ -67,36 +68,21 @@ const PatientAppointments = () => {
 
   const fetchDoctors = async () => {
     try {
-      const response = await axios.get('/api/appointments/doctors/available');
+      const response = await axios.get('/api/patient/doctors/available');
       setDoctors(response.data);
     } catch (error) {
       console.error('Failed to load doctors:', error);
     }
   };
 
-  const fetchAvailableSlots = async (doctorId, date) => {
-    if (!doctorId || !date) return;
-    
-    setLoadingSlots(true);
-    try {
-      const response = await axios.get(`/api/appointments/doctors/${doctorId}/slots?date=${date}`);
-      setAvailableSlots(response.data.availableSlots);
-    } catch (error) {
-      toast.error('Failed to load available slots');
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
-
   const bookAppointment = async () => {
+    if (!newAppointment.doctorId || !newAppointment.date || !newAppointment.time) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     try {
-      const symptoms = newAppointment.symptoms.split(',').map(s => s.trim()).filter(s => s);
-      
-      await axios.post('/api/appointments', {
-        ...newAppointment,
-        symptoms
-      });
-      
+      const response = await axios.post('/api/patient/appointments', newAppointment);
       toast.success('Appointment booked successfully');
       setShowBookingModal(false);
       setNewAppointment({
@@ -104,10 +90,9 @@ const PatientAppointments = () => {
         date: '',
         time: '',
         type: 'consultation',
-        symptoms: '',
+        symptoms: [],
         notes: ''
       });
-      setBookingStep(1);
       fetchAppointments();
     } catch (error) {
       toast.error('Failed to book appointment');
@@ -115,14 +100,12 @@ const PatientAppointments = () => {
   };
 
   const cancelAppointment = async (appointmentId) => {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      try {
-        await axios.delete(`/api/appointments/${appointmentId}`);
-        toast.success('Appointment cancelled successfully');
-        fetchAppointments();
-      } catch (error) {
-        toast.error('Failed to cancel appointment');
-      }
+    try {
+      await axios.put(`/api/patient/appointments/${appointmentId}/cancel`);
+      toast.success('Appointment cancelled successfully');
+      fetchAppointments();
+    } catch (error) {
+      toast.error('Failed to cancel appointment');
     }
   };
 
@@ -150,12 +133,30 @@ const PatientAppointments = () => {
     }
   };
 
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'video_consultation': return <Video className="h-4 w-4" />;
+      case 'home_visit': return <MapPin className="h-4 w-4" />;
+      default: return <User className="h-4 w-4" />;
+    }
+  };
+
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = !searchTerm || 
       apt.doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apt.doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const matchesStatus = !statusFilter || apt.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
+
+  const handleSymptomToggle = (symptom) => {
+    setNewAppointment(prev => ({
+      ...prev,
+      symptoms: prev.symptoms.includes(symptom)
+        ? prev.symptoms.filter(s => s !== symptom)
+        : [...prev.symptoms, symptom]
+    }));
+  };
 
   if (loading) {
     return (
@@ -167,14 +168,14 @@ const PatientAppointments = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+          <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
           <p className="text-gray-600">Manage your medical appointments</p>
         </div>
         <button
           onClick={() => setShowBookingModal(true)}
-          className="btn btn-primary"
+          className="btn btn-primary flex items-center"
         >
           <Plus className="h-4 w-4 mr-2" />
           Book Appointment
@@ -207,288 +208,229 @@ const PatientAppointments = () => {
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
             </select>
           </div>
         </div>
 
         {/* Appointments List */}
-        {filteredAppointments.length > 0 ? (
-          <div className="space-y-4">
-            {filteredAppointments.map((appointment) => (
-              <div key={appointment._id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          Dr. {appointment.doctor.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {appointment.doctor.specialization} • {appointment.doctor.department}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {new Date(appointment.date).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2" />
-                        {appointment.time}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {appointment.hospital?.name || 'Hospital'}
-                      </div>
-                    </div>
-
-                    {appointment.symptoms && appointment.symptoms.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Symptoms:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {appointment.symptoms.map((symptom, index) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {symptom}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {appointment.notes && (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Notes:</p>
-                        <p className="text-sm text-gray-600">{appointment.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="ml-4 text-right">
-                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(appointment.status)}`}>
+        <div className="space-y-4">
+          {filteredAppointments.map((appointment) => (
+            <div key={appointment._id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center mb-2">
+                    {getTypeIcon(appointment.type)}
+                    <h3 className="text-lg font-semibold text-gray-900 ml-2">
+                      {appointment.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </h3>
+                    <span className={`ml-3 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)}`}>
                       {getStatusIcon(appointment.status)}
                       <span className="ml-1">{appointment.status.replace('_', ' ')}</span>
                     </span>
-                    
-                    <div className="mt-3 space-y-2">
-                      <button
-                        onClick={() => {
-                          setSelectedAppointment(appointment);
-                          setShowDetailsModal(true);
-                        }}
-                        className="block w-full btn btn-secondary text-sm"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
-                      </button>
-                      
-                      {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
-                        <button
-                          onClick={() => cancelAppointment(appointment._id)}
-                          className="block w-full btn btn-danger text-sm"
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Cancel
-                        </button>
-                      )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <User className="h-4 w-4 mr-2" />
+                      Dr. {appointment.doctor.name} - {appointment.doctor.specialization}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {appointment.doctor.phone}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      {appointment.doctor.department}
                     </div>
                   </div>
+
+                  {appointment.symptoms && appointment.symptoms.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Symptoms:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {appointment.symptoms.map((symptom, index) => (
+                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {symptom}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {appointment.notes && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-1">Notes:</p>
+                      <p className="text-sm text-gray-600">{appointment.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-2 ml-4">
+                  <button
+                    onClick={() => {
+                      setSelectedAppointment(appointment);
+                      setShowDetailsModal(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-900"
+                  >
+                    <Eye className="h-5 w-5" />
+                  </button>
+                  
+                  {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
+                    <button
+                      onClick={() => cancelAppointment(appointment._id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <XCircle className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No appointments found</p>
-            <button
-              onClick={() => setShowBookingModal(true)}
-              className="mt-4 btn btn-primary"
-            >
-              Book Your First Appointment
-            </button>
-          </div>
-        )}
+            </div>
+          ))}
+
+          {filteredAppointments.length === 0 && (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No appointments found</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Booking Modal */}
+      {/* Book Appointment Modal */}
       {showBookingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Book Appointment</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Book New Appointment</h2>
                 <button
-                  onClick={() => {
-                    setShowBookingModal(false);
-                    setBookingStep(1);
-                    setNewAppointment({
-                      doctorId: '',
-                      date: '',
-                      time: '',
-                      type: 'consultation',
-                      symptoms: '',
-                      notes: ''
-                    });
-                  }}
+                  onClick={() => setShowBookingModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-6 w-6" />
+                  <XCircle className="h-6 w-6" />
                 </button>
               </div>
             </div>
             
-            <div className="p-6">
-              {bookingStep === 1 && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Doctor *
-                    </label>
-                    <select
-                      value={newAppointment.doctorId}
-                      onChange={(e) => {
-                        setNewAppointment({...newAppointment, doctorId: e.target.value});
-                        if (newAppointment.date) {
-                          fetchAvailableSlots(e.target.value, newAppointment.date);
-                        }
-                      }}
-                      className="input-field"
-                    >
-                      <option value="">Choose a doctor</option>
-                      {doctors.map(doctor => (
-                        <option key={doctor._id} value={doctor._id}>
-                          Dr. {doctor.name} - {doctor.specialization}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Appointment Type *
-                    </label>
-                    <select
-                      value={newAppointment.type}
-                      onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value})}
-                      className="input-field"
-                    >
-                      {appointmentTypes.map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={newAppointment.date}
-                      onChange={(e) => {
-                        setNewAppointment({...newAppointment, date: e.target.value});
-                        if (newAppointment.doctorId) {
-                          fetchAvailableSlots(newAppointment.doctorId, e.target.value);
-                        }
-                      }}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="input-field"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => setBookingStep(2)}
-                    disabled={!newAppointment.doctorId || !newAppointment.date}
-                    className="btn btn-primary w-full disabled:opacity-50"
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Doctor *
+                  </label>
+                  <select
+                    value={newAppointment.doctorId}
+                    onChange={(e) => setNewAppointment({...newAppointment, doctorId: e.target.value})}
+                    className="input-field"
                   >
-                    Next - Select Time Slot
-                  </button>
+                    <option value="">Select Doctor</option>
+                    {doctors.map(doctor => (
+                      <option key={doctor._id} value={doctor._id}>
+                        Dr. {doctor.name} - {doctor.specialization}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
 
-              {bookingStep === 2 && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Available Time Slots *
-                    </label>
-                    {loadingSlots ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                      </div>
-                    ) : availableSlots.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {availableSlots.map((slot) => (
-                          <button
-                            key={slot}
-                            onClick={() => setNewAppointment({...newAppointment, time: slot})}
-                            className={`p-2 text-sm border rounded-lg transition-colors ${
-                              newAppointment.time === slot
-                                ? 'border-green-500 bg-green-50 text-green-700'
-                                : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">
-                        No available slots for this date. Please select another date.
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Symptoms (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={newAppointment.symptoms}
-                      onChange={(e) => setNewAppointment({...newAppointment, symptoms: e.target.value})}
-                      className="input-field"
-                      placeholder="fever, headache, cough"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Additional Notes
-                    </label>
-                    <textarea
-                      value={newAppointment.notes}
-                      onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
-                      className="input-field"
-                      rows="3"
-                      placeholder="Any additional information..."
-                    />
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setBookingStep(1)}
-                      className="btn btn-secondary flex-1"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={bookAppointment}
-                      disabled={!newAppointment.time}
-                      className="btn btn-primary flex-1 disabled:opacity-50"
-                    >
-                      Book Appointment
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Appointment Type *
+                  </label>
+                  <select
+                    value={newAppointment.type}
+                    onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value})}
+                    className="input-field"
+                  >
+                    {appointmentTypes.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={newAppointment.time}
+                    onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Symptoms
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+                  {commonSymptoms.map(symptom => (
+                    <button
+                      key={symptom}
+                      type="button"
+                      onClick={() => handleSymptomToggle(symptom)}
+                      className={`px-3 py-2 text-xs rounded-full border transition-colors ${
+                        newAppointment.symptoms.includes(symptom)
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {symptom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional Notes
+                </label>
+                <textarea
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
+                  rows={4}
+                  placeholder="Describe your symptoms or any additional information..."
+                  className="input-field"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={bookAppointment}
+                  className="btn btn-primary flex-1"
+                >
+                  Book Appointment
+                </button>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="btn btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -505,44 +447,57 @@ const PatientAppointments = () => {
                   onClick={() => setShowDetailsModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-6 w-6" />
+                  <XCircle className="h-6 w-6" />
                 </button>
               </div>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Doctor</h3>
-                  <p className="text-sm text-gray-900">Dr. {selectedAppointment.doctor.name}</p>
-                  <p className="text-sm text-gray-500">{selectedAppointment.doctor.specialization}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Doctor Information</h3>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Name:</span> Dr. {selectedAppointment.doctor.name}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Specialization:</span> {selectedAppointment.doctor.specialization}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Department:</span> {selectedAppointment.doctor.department}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Phone:</span> {selectedAppointment.doctor.phone}
+                    </p>
+                  </div>
                 </div>
+                
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Hospital</h3>
-                  <p className="text-sm text-gray-900">{selectedAppointment.hospital?.name}</p>
-                  <p className="text-sm text-gray-500">{selectedAppointment.hospital?.address}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Appointment Details</h3>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Type:</span> {selectedAppointment.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Date:</span> {new Date(selectedAppointment.date).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Time:</span> {selectedAppointment.time}
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      <span className="font-medium">Status:</span> 
+                      <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedAppointment.status)}`}>
+                        {selectedAppointment.status.replace('_', ' ')}
+                      </span>
+                    </p>
+                  </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Date & Time</h3>
-                  <p className="text-sm text-gray-900">
-                    {new Date(selectedAppointment.date).toLocaleDateString()} at {selectedAppointment.time}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Status</h3>
-                  <span className={`status-badge ${getStatusColor(selectedAppointment.status)}`}>
-                    {selectedAppointment.status.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-
+              
               {selectedAppointment.symptoms && selectedAppointment.symptoms.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Symptoms</h3>
-                  <div className="flex flex-wrap gap-1">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Symptoms</h3>
+                  <div className="flex flex-wrap gap-2">
                     {selectedAppointment.symptoms.map((symptom, index) => (
                       <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                         {symptom}
@@ -551,27 +506,29 @@ const PatientAppointments = () => {
                   </div>
                 </div>
               )}
-
+              
               {selectedAppointment.notes && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Notes</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
                   <p className="text-sm text-gray-900">{selectedAppointment.notes}</p>
                 </div>
               )}
 
               {selectedAppointment.prescription && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Prescription</h3>
-                  <div className="bg-gray-50 p-3 rounded">
-                    {selectedAppointment.prescription.medicines?.map((med, index) => (
-                      <div key={index} className="text-sm text-gray-900 mb-1">
-                        {med.name} - {med.dosage}, {med.frequency}, {med.duration}
-                      </div>
-                    ))}
-                    {selectedAppointment.prescription.instructions && (
-                      <p className="text-sm text-gray-700 mt-2">{selectedAppointment.prescription.instructions}</p>
-                    )}
-                  </div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Prescription</h3>
+                  {selectedAppointment.prescription.medicines && selectedAppointment.prescription.medicines.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {selectedAppointment.prescription.medicines.map((med, index) => (
+                        <div key={index} className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                          <span className="font-medium">{med.name}</span> - {med.dosage}, {med.frequency}, {med.duration}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedAppointment.prescription.instructions && (
+                    <p className="text-sm text-gray-900">{selectedAppointment.prescription.instructions}</p>
+                  )}
                 </div>
               )}
             </div>

@@ -82,7 +82,7 @@ const Login = () => {
           <div className="text-center mb-12">
             <div className="flex justify-center items-center mb-4">
               <Heart className="h-12 w-12 text-red-500 mr-3" />
-              <h1 className="text-4xl font-bold text-gray-900">Hospital Resource Tracker</h1>
+              <h1 className="text-4xl font-bold text-gray-900">Clini Connect</h1>
             </div>
             <p className="text-lg text-gray-600">Real-time emergency resource allocation system</p>
           </div>

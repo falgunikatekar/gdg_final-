@@ -127,4 +127,10 @@ router.delete('/documents/:documentId', patientAuth, async (req, res) => {
   }
 });
 
+// Emergency routes
+router.use('/emergency-contacts', require('./emergency-contacts'));
+router.use('/nearby-hospitals', require('./nearby-hospitals'));
+router.use('/emergency-requests', require('./emergency-requests'));
+router.use('/emergency-request', require('./emergency-request'));
+
 module.exports = router;

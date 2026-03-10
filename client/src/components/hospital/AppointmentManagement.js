@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -10,10 +10,8 @@ import {
   AlertCircle,
   TrendingUp,
   DollarSign,
-  Filter,
   Search,
   Eye,
-  Edit2,
   Plus
 } from 'lucide-react';
 
@@ -29,13 +27,7 @@ const AppointmentManagement = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  useEffect(() => {
-    fetchAppointments();
-    fetchDoctors();
-    fetchStats();
-  }, [selectedDate, statusFilter, doctorFilter]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (selectedDate) params.append('date', selectedDate);
@@ -49,7 +41,7 @@ const AppointmentManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, statusFilter, doctorFilter]);
 
   const fetchDoctors = async () => {
     try {
@@ -60,6 +52,21 @@ const AppointmentManagement = () => {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get('/api/appointments/stats/overview');
+      setStats(response.data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchDoctors();
+    fetchStats();
+  }, [selectedDate, statusFilter, doctorFilter, fetchAppointments]);
+
   const seedDoctors = async () => {
     try {
       const response = await axios.post('/api/appointments/doctors/seed');
@@ -68,15 +75,6 @@ const AppointmentManagement = () => {
     } catch (error) {
       console.error('Failed to seed doctors:', error);
       toast.error('Failed to seed doctors');
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await axios.get('/api/appointments/stats/overview');
-      setStats(response.data);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
     }
   };
 

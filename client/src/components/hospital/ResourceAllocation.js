@@ -49,9 +49,16 @@ const ResourceAllocation = () => {
   const fetchAllocations = async () => {
     try {
       const response = await axios.get('/api/allocations');
-      setAllocations(response.data.allocations);
+      // Handle both mock and real data formats
+      const allocationsData = response.data.allocations || response.data;
+      setAllocations(allocationsData.map(allocation => ({
+        ...allocation,
+        patientName: allocation.patientName || allocation.patient?.name || 'Unknown Patient',
+        doctorName: allocation.doctorName || allocation.doctor?.name || null
+      })));
     } catch (error) {
       toast.error('Failed to load allocations');
+      console.error('Allocation fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -94,6 +101,15 @@ const ResourceAllocation = () => {
     try {
       const response = await axios.post('/api/allocations', newAllocation);
       toast.success('Resource allocated successfully');
+
+      // Add the new allocation to the list immediately for better UX
+      const newAlloc = {
+        ...response.data.allocation,
+        patientName: response.data.allocation.patientName || 'Mock Patient',
+        doctorName: response.data.allocation.doctorName || null
+      };
+      setAllocations(prev => [newAlloc, ...prev]);
+
       setNewAllocation({
         type: '',
         resourceId: '',
@@ -104,10 +120,10 @@ const ResourceAllocation = () => {
         notes: ''
       });
       setShowAllocateForm(false);
-      fetchAllocations();
-      fetchStats();
+      fetchStats(); // Refresh stats
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to allocate resource');
+      console.error('Allocation error:', error);
     }
   };
 
@@ -115,10 +131,18 @@ const ResourceAllocation = () => {
     try {
       await axios.put(`/api/allocations/${allocationId}/release`);
       toast.success('Resource released successfully');
-      fetchAllocations();
-      fetchStats();
+
+      // Update the allocation status in the local state
+      setAllocations(prev => prev.map(alloc =>
+        alloc._id === allocationId
+          ? { ...alloc, status: 'released', updatedAt: new Date() }
+          : alloc
+      ));
+
+      fetchStats(); // Refresh stats
     } catch (error) {
       toast.error('Failed to release resource');
+      console.error('Release error:', error);
     }
   };
 
@@ -171,8 +195,8 @@ const ResourceAllocation = () => {
   };
 
   const filteredAllocations = allocations.filter(allocation =>
-    allocation.resourceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    allocation.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (allocation.resourceName && allocation.resourceName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (allocation.patientName && allocation.patientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (allocation.doctorName && allocation.doctorName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -412,23 +436,23 @@ const ResourceAllocation = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {allocation.patient.name}
+                      {allocation.patientName || allocation.patient?.name || 'Unknown Patient'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {allocation.patient.age}y, {allocation.patient.gender}
+                      {allocation.patient?.age ? `${allocation.patient.age}y, ${allocation.patient.gender}` : 'Age/Gender not available'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {allocation.patient.contact}
+                      {allocation.patient?.contact || 'Contact not available'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {allocation.doctor ? (
+                    {allocation.doctorName || allocation.doctor?.name ? (
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          Dr. {allocation.doctor.name}
+                          Dr. {allocation.doctorName || allocation.doctor.name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {allocation.doctor.specialization}
+                          {allocation.doctor?.specialization || 'Specialization not available'}
                         </div>
                       </div>
                     ) : (

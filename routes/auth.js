@@ -1,12 +1,15 @@
 const express = require('express');
+const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
 const Hospital = require('../models/Hospital');
 const Patient = require('../models/Patient');
+const { body, validationResult } = require('express-validator');
 const { auth } = require('../middleware/auth');
 
-const router = express.Router();
+// Debug: Check JWT secret
+console.log('JWT Secret loaded:', process.env.JWT_SECRET ? 'Yes' : 'No');
+console.log('JWT Secret value:', process.env.JWT_SECRET);
 
 // Login route with user type selection
 router.post('/login', [
@@ -18,11 +21,19 @@ router.post('/login', [
     }
     return true;
   }),
-  body('patientData').optional().isObject().withMessage('Patient data is required for patient registration')
+  body('patientData').custom((value, { req }) => {
+    if (req.body.userType === 'patient' && (!value || typeof value !== 'object')) {
+      throw new Error('Patient data is required for patient access');
+    }
+    return true;
+  })
 ], async (req, res) => {
   try {
+    console.log('Login attempt received:', JSON.stringify(req.body, null, 2));
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
@@ -30,21 +41,40 @@ router.post('/login', [
 
     if (userType === 'hospital') {
       // Hospital login
-      const hospital = await Hospital.findOne({ username });
-      if (!hospital) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
+      let hospital;
 
-      const isMatch = await bcrypt.compare(password, hospital.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials' });
+      // Check if we're in mock mode
+      if (global.mockMode) {
+        console.log('Mock mode detected, checking credentials...');
+        // Mock authentication
+        if (username === 'admin' && password === 'admin123') {
+          hospital = global.mockHospital;
+          console.log('Mock authentication successful');
+        } else {
+          console.log('Mock authentication failed - invalid credentials');
+          return res.status(400).json({ message: 'Invalid credentials' });
+        }
+      } else {
+        console.log('Database mode, checking credentials...');
+        // Normal database authentication
+        hospital = await Hospital.findOne({ username });
+        if (!hospital) {
+          return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        const isMatch = await bcrypt.compare(password, hospital.password);
+        if (!isMatch) {
+          return res.status(400).json({ message: 'Invalid credentials' });
+        }
       }
 
       const token = jwt.sign(
         { id: hospital._id, type: 'hospital' },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'fallback_jwt_secret_123456',
         { expiresIn: '24h' }
       );
+
+      console.log('JWT token generated successfully');
 
       res.json({
         token,
@@ -57,28 +87,56 @@ router.post('/login', [
       });
     } else if (userType === 'patient') {
       // Patient registration/login
+      console.log('Processing patient login...');
       if (!patientData) {
+        console.log('Patient data missing');
         return res.status(400).json({ message: 'Patient data is required for patient access' });
       }
 
-      // Check if patient already exists by contact
-      let patient = await Patient.findOne({ contact: patientData.contact });
+      console.log('Patient data received:', JSON.stringify(patientData, null, 2));
 
-      if (!patient) {
-        // Create new patient
-        patient = new Patient(patientData);
-        await patient.save();
+      let patient;
+
+      if (global.mockMode) {
+        console.log('Mock mode detected, checking patient ...');
+        patient = global.mockPatients.find(p => p.contact === patientData.contact);
+
+        if (!patient) {
+          console.log('Creating new patient in mock mode');
+          patient = {
+            _id: 'mock_patient_id_' + Math.random().toString(36).substr(2, 9),
+            ...patientData
+          };
+          global.mockPatients.push(patient);
+          console.log('New patient created and added to mock data');
+        } else {
+          console.log('Existing patient found, updating data');
+          Object.assign(patient, patientData);
+        }
       } else {
-        // Update existing patient data
-        Object.assign(patient, patientData);
-        await patient.save();
+        // Check if patient already exists by contact
+        patient = await Patient.findOne({ contact: patientData.contact });
+
+        if (!patient) {
+          // Create new patient
+          patient = new Patient(patientData);
+          await patient.save();
+        } else {
+          // Update existing patient data
+          Object.assign(patient, patientData);
+          await patient.save();
+        }
       }
+
+      console.log('Patient processed successfully:', patient.name);
 
       const token = jwt.sign(
         { id: patient._id, type: 'patient' },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'fallback_jwt_secret_123456',
         { expiresIn: '24h' }
       );
+
+      console.log('JWT token generated for patient');
 
       res.json({
         token,
@@ -154,7 +212,7 @@ router.post('/register-hospital', [
 
     const token = jwt.sign(
       { id: hospital._id, type: 'hospital' },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback_jwt_secret_123456',
       { expiresIn: '24h' }
     );
 

@@ -16,7 +16,8 @@ import {
   TrendingUp,
   AlertCircle,
   CheckCircle,
-  UserCheck
+  UserCheck,
+  AlertTriangle
 } from 'lucide-react';
 import DashboardOverview from '../components/hospital/DashboardOverview';
 import ResourceManagement from '../components/hospital/ResourceManagement';
@@ -25,6 +26,7 @@ import PatientManagement from '../components/hospital/PatientManagement';
 import InventoryManagement from '../components/hospital/InventoryManagement';
 import AppointmentManagement from '../components/hospital/AppointmentManagement';
 import ReportManagement from '../components/hospital/ReportManagement';
+import EmergencyRequests from '../components/hospital/EmergencyRequests';
 
 const HospitalDashboard = () => {
   const { user, logout } = useAuth();
@@ -40,6 +42,7 @@ const HospitalDashboard = () => {
     { id: 'inventory', label: 'Inventory', icon: Package, path: '/hospital/inventory' },
     { id: 'appointments', label: 'Appointments', icon: Calendar, path: '/hospital/appointments' },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/hospital/reports' },
+    { id: 'emergency', label: 'Emergency', icon: AlertTriangle, path: '/hospital/emergency' },
   ];
 
   const handleLogout = () => {
@@ -117,10 +120,12 @@ const HospitalDashboard = () => {
           <Routes>
             <Route path="/" element={<DashboardOverview />} />
             <Route path="/resources" element={<ResourceManagement />} />
+            <Route path="/allocation" element={<ResourceAllocation />} />
             <Route path="/patients" element={<PatientManagement />} />
             <Route path="/inventory" element={<InventoryManagement />} />
             <Route path="/appointments" element={<AppointmentManagement />} />
             <Route path="/reports" element={<ReportManagement />} />
+            <Route path="/emergency" element={<EmergencyRequests />} />
           </Routes>
         </main>
       </div>
